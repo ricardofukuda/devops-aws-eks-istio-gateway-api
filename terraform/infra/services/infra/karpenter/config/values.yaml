@@ -1,0 +1,35 @@
+settings:
+  clusterName: ${CLUSTER_NAME}
+  interruptionQueue: ${interruptionQueue}
+  clusterEndpoint: ${endpoint}
+  AWSENILimitedPodDensity:
+  eksControlPlane: true
+  featureGates:
+    SpotToSpotConsolidation: true
+
+nodeSelector:
+  kubernetes.io/os: linux
+  role: infra
+
+serviceAccount:
+  name: ${service_account}
+
+replicas: 1
+controller:
+  env: # true => Indicates whether new nodes should use ENI-based pod density. Useful when used together with ENABLE_PREFIX_DELEGATION to allow larger amount of pods per node.
+    - name: AWS_ENI_LIMITED_POD_DENSITY
+      value: "true"
+  resources:
+    requests:
+      cpu: 75m
+      memory: 150Mi
+    limits:
+      cpu: 150m
+      memory: 1Gi
+
+
+tolerations:
+  - key: "role"
+    operator: "Equal"
+    value: "infra"
+    effect: "NoSchedule"

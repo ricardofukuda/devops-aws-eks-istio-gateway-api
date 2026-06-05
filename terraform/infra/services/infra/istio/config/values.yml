@@ -1,0 +1,17 @@
+pilot:
+  nodeSelector:
+    role: infra
+  resources:
+    requests:
+      cpu: 75m
+      memory: 250Mi
+    limits:
+      cpu: 150m
+      memory: 1Gi
+  tolerations:
+    - key: "role"
+      operator: "Equal"
+      value: "infra"
+      effect: "NoSchedule"
+
+priorityClassName: "system-cluster-critical"
