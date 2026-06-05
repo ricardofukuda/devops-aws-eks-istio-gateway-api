@@ -1,3 +1,7 @@
+locals {
+  cluster_name = "eks-${var.env}"
+}
+
 module "nat-instance" {
   source = "../../modules/nat-instance"
 
