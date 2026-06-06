@@ -1,0 +1,1 @@
+istio_version = "1.30.1"

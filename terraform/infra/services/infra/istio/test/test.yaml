@@ -1,0 +1,167 @@
+# kubectl create namespace istio-ingress
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app
+  labels:
+    istio.io/dataplane-mode: ambient # To add applications or namespaces to the mesh in ambient mode
+    istio.io/use-waypoint: waypoint # must match the waypoint's Gateway 'name'. By default, matches waypoint from the same namespace
+    istio.io/use-waypoint-namespace: istio-system # allow apps Pods to access the waypoint from the istio-system namespace
+  annotations:
+    networking.istio.io/traffic-distribution: PreferSameZone # Prioritize endpoints by proximity: network, region, zone, then subzone. Traffic goes to the closest healthy endpoints first.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: http
+  namespace: app
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: http
+  namespace: app
+  labels:
+    app: http
+    service: http
+  annotations:
+    networking.istio.io/traffic-distribution: PreferSameZone 
+spec:
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 80
+  selector:
+    app: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: http
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: http
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: http
+        version: v1
+        # istio.io/dataplane-mode: ambient # To add applications or namespaces to the mesh in ambient mode
+    spec:
+      serviceAccountName: http
+      containers:
+      - image: httpd:2.4.67
+        imagePullPolicy: IfNotPresent
+        name: http
+        ports:
+        - containerPort: 80
+#---
+#apiVersion: gateway.networking.k8s.io/v1
+#kind: Gateway
+#metadata:
+#  name: gateway
+#  namespace: istio-ingress
+#spec:
+#  gatewayClassName: istio
+#  listeners:
+#  - name: default
+#    hostname: "*.example.com"
+#    port: 80
+#    protocol: HTTP
+#    allowedRoutes:
+#      namespaces:
+#        from: All
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http
+  namespace: app
+spec:
+  parentRefs:
+  - name: gateway-public
+    namespace: istio-ingress
+  hostnames: ["http.ricardoxyz.website"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: http
+      port: 8000
+---
+apiVersion: security.istio.io/v1 
+kind: AuthorizationPolicy # Enforce Layer 4 authorization policy - allow or deny which services can communicate with http pods
+metadata:
+  name: http
+  namespace: app
+spec:
+  targetRefs:
+  - kind: Service # for Services
+    name: http
+#  selector: # for Pods
+#    matchLabels:
+#      app: http
+  action: ALLOW
+  rules:
+    - from:
+      - source:
+          principals:
+          - cluster.local/ns/app/sa/alpine
+      to:
+      - operation:
+          methods: ["GET"] # Enforce Layer 7 authorization policy. Resquires waypoint proxy install.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alpine
+  namespace: app
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alpine
+  namespace: app
+  labels:
+    app: alpine
+    service: alpine
+spec:
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 80
+  selector:
+    app: alpine
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alpine
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alpine
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: alpine
+        version: v1
+    spec:
+      serviceAccountName: alpine
+      containers:
+      - image: alpine:3.23.4
+        imagePullPolicy: IfNotPresent
+        command: ["sleep", "infinity"] # curl http://http.app:8000
+        name: alpine
+        ports:
+        - containerPort: 80

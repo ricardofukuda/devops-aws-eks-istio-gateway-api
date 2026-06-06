@@ -5,7 +5,3 @@ variable "env" {
 variable "route53_domain"{
   type = string
 }
-
-variable "istio_version"{
-  type = string
-}

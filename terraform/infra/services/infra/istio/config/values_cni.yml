@@ -1,3 +1,7 @@
+profile: ambient 
+
+
+
 pilot:
   nodeSelector:
     role: infra

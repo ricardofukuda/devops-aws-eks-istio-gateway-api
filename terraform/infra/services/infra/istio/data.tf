@@ -13,23 +13,26 @@ data "aws_eks_cluster_auth" "eks_auth" {
   name =  data.aws_eks_cluster.eks.name
 }
 
-data "template_file" "values" {
-  template = file("config/values.yml")
+data "template_file" "values_istiod" {
+  template = file("config/values_istiod.yml")
   vars = {
-  }
-}
-
-data "template_file" "values_ingressgateway_public" {
-  template = file("config/values_ingressgateway_public.yml")
-  vars = {
-    certificate_arn = data.aws_acm_certificate.certificate.arn
-    #cidr_range = join(",", local.allow_ips, local.github_webhook_ips) # FOR LOCAL DEVELOPMENT ONLY
-    cidr_range = join(",", local.allow_ips)
   }
 }
 
 data "template_file" "values_base" {
   template = file("config/values_base.yml")
+  vars = {
+  }
+}
+
+data "template_file" "values_cni" {
+  template = file("config/values_cni.yml")
+  vars = {
+  }
+}
+
+data "template_file" "values_ztunnel" {
+  template = file("config/values_ztunnel.yml")
   vars = {
   }
 }
