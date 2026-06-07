@@ -4,6 +4,8 @@ data "template_file" "istio_gateway" {
   template = file("${path.module}/manifests/istio-gateway.yaml")
   vars = {
     route53_domain = var.route53_domain
+    lb_source_range = "${chomp(data.http.icanhazip.response_body)}/32" # my ip
+    certificate_arn = data.aws_acm_certificate.certificate.arn
   }
 }
 

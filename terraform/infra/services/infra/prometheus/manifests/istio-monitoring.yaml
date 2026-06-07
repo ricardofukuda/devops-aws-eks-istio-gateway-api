@@ -1,0 +1,111 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: istiod
+  namespace: prometheus-stack
+  labels:
+    release: prometheus-stack
+spec:
+  # 1. Target Pods: Selects Pods based on the matching labels
+  selector:
+    matchLabels:
+      app: istiod
+      
+  # 2. Namespace Selector: Defines which namespaces to search for the Pods
+  namespaceSelector:
+    matchNames:
+      - istio-system
+
+  # 3. Metrics Endpoints: Defines the scraping parameters
+  podMetricsEndpoints:
+    - port: http-monitoring    # Name of the port defined in your Pod specification
+      interval: 60s         # Scrape interval
+      path: /metrics        # Metrics path
+      metricRelabelings:    # Optional: Filter or drop specific metrics
+        - sourceLabels: [__name__]
+          regex: 'go_.*'
+          action: drop
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: ztunnel
+  namespace: prometheus-stack
+  labels:
+    release: prometheus-stack
+spec:
+  # 1. Target Pods: Selects Pods based on the matching labels
+  selector:
+    matchLabels:
+      app: ztunnel
+      
+  # 2. Namespace Selector: Defines which namespaces to search for the Pods
+  namespaceSelector:
+    matchNames:
+      - istio-system
+
+  # 3. Metrics Endpoints: Defines the scraping parameters
+  podMetricsEndpoints:
+    - port: ztunnel-stats    # Name of the port defined in your Pod specification
+      interval: 60s         # Scrape interval
+      path: /metrics        # Metrics path
+      metricRelabelings:    # Optional: Filter or drop specific metrics
+        - sourceLabels: [__name__]
+          regex: 'go_.*'
+          action: drop
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: waypoint
+  namespace: prometheus-stack
+  labels:
+    release: prometheus-stack
+spec:
+  # 1. Target Pods: Selects Pods based on the matching labels
+  selector:
+    matchLabels:
+      "service.istio.io/canonical-name": waypoint
+      
+  # 2. Namespace Selector: Defines which namespaces to search for the Pods
+  namespaceSelector:
+    matchNames:
+      - istio-system
+
+  # 3. Metrics Endpoints: Defines the scraping parameters
+  podMetricsEndpoints:
+    - port: metrics    # Name of the port defined in your Pod specification
+      interval: 60s         # Scrape interval
+      path: /stats/prometheus        # Metrics path
+      metricRelabelings:    # Optional: Filter or drop specific metrics
+        - sourceLabels: [__name__]
+          regex: 'go_.*'
+          action: drop
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: gateway-public-istio
+  namespace: prometheus-stack
+  labels:
+    release: prometheus-stack
+spec:
+  # 1. Target Pods: Selects Pods based on the matching labels
+  selector:
+    matchLabels:
+      "service.istio.io/canonical-name": gateway-public-istio
+      
+  # 2. Namespace Selector: Defines which namespaces to search for the Pods
+  namespaceSelector:
+    matchNames:
+      - istio-ingress
+
+  # 3. Metrics Endpoints: Defines the scraping parameters
+  podMetricsEndpoints:
+    - port: metrics    # Name of the port defined in your Pod specification
+      interval: 60s         # Scrape interval
+      path: /metrics        # Metrics path
+      metricRelabelings:    # Optional: Filter or drop specific metrics
+        - sourceLabels: [__name__]
+          regex: 'go_.*'
+          action: drop

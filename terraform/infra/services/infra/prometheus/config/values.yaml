@@ -1,0 +1,9 @@
+prometheus:
+  route:
+    main:
+      enabled: true
+      hostnames:
+        - prometheus.${route53_domain}
+      parentRefs:
+        - name: gateway-public
+          namespace: istio-ingress

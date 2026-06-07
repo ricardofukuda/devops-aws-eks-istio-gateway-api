@@ -3,21 +3,73 @@ kind: Namespace
 metadata:
   name: istio-ingress
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-public-options
+  namespace: istio-ingress
+data:
+  horizontalPodAutoscaler: |
+    spec:
+      minReplicas: 1
+      maxReplicas: 2
+  deployment: |
+    spec:
+      replicas: 1
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: gateway-public # Creates a Public ingress ELB
   namespace: istio-ingress
+  annotations:
+    networking.istio.io/service-type: LoadBalancer
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "${certificate_arn}"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp" # must be tcp
+    service.beta.kubernetes.io/load-balancer-source-ranges: "${lb_source_range}"
 spec:
   gatewayClassName: istio
+  infrastructure:
+    parametersRef:
+      group: ""
+      kind: ConfigMap
+      name: gateway-public-options
   listeners:
-  - name: default
+  - name: https
     hostname: "*.${route53_domain}"
-    port: 80
-    protocol: HTTP
+    port: 443
+    protocol: HTTP # backend protocol
     allowedRoutes:
       namespaces:
         from: All
+  - name: http
+    hostname: "*.${route53_domain}"
+    port: 80
+    protocol: HTTP # backend protocol
+    allowedRoutes:
+      namespaces:
+        from: All
+---
+# force http to https redirect
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: http-to-https
+  namespace: istio-ingress
+spec:
+  parentRefs:
+  - name: gateway-public
+    namespace: istio-ingress
+    sectionName: http
+  hostnames:
+  - "*.${route53_domain}"
+  rules:
+  - filters:
+    - type: RequestRedirect
+      requestRedirect:
+        scheme: https
+        statusCode: 301
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
