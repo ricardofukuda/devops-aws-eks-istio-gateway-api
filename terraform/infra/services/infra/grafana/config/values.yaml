@@ -1,0 +1,33 @@
+
+route:
+  main:
+    enabled: true
+    hostnames:
+      - grafana.${route53_domain}
+    parentRefs:
+      - name: gateway-public
+        namespace: istio-ingress
+admin:
+  existingSecret: "admin-credentials"
+  userKey: admin-user
+  passwordKey: admin-password
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      url: http://prometheus-stack-kube-prom-prometheus.prometheus-stack:9090
+      access: proxy
+      isDefault: false
+      jsonData:
+        timeInterval: "60s" 
+#    - name: CloudWatch
+#      type: cloudwatch
+#      access: proxy
+#      uid: cloudwatch
+#      editable: false
+#      jsonData:
+#        authType: default
+#        defaultRegion: us-east-1

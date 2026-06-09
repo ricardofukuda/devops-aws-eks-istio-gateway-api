@@ -14,6 +14,4 @@ locals {
 resource "kubernetes_manifest" "istio_monitoring" {
   count = length(local.istio_monitoring_manifest_raw)
   manifest = local.istio_monitoring_manifest_raw[count.index]
-
-  depends_on=[helm_release.prometheus_stack]
 }

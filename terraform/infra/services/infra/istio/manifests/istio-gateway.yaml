@@ -27,7 +27,9 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "${certificate_arn}"
     service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"
     service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp" # must be tcp
-    service.beta.kubernetes.io/load-balancer-source-ranges: "${lb_source_range}"
+    #service.beta.kubernetes.io/load-balancer-source-ranges: "${lb_source_range}"
+    service.beta.kubernetes.io/aws-load-balancer-security-group-prefix-lists: "pl-3b927c52"
+
 spec:
   gatewayClassName: istio
   infrastructure:
@@ -70,14 +72,34 @@ spec:
       requestRedirect:
         scheme: https
         statusCode: 301
+#---
+#apiVersion: gateway.networking.k8s.io/v1
+#kind: Gateway
+#metadata:
+#  labels:
+#    istio.io/waypoint-for: service # only traffic destined for Services will be proxied through waypoint.
+#  name: waypoint # Deploys waypoint proxy to process L7's istio network features
+#  namespace: istio-system
+#spec:
+#  gatewayClassName: istio-waypoint
+#  listeners:
+#  - name: mesh
+#    port: 15008
+#    protocol: HBONE
+#    allowedRoutes:
+#      namespaces:
+#        from: Selector # 'All' to allow from any namespaces
+#        selector:
+#          matchLabels:
+#            kubernetes.io/metadata.name: app # allow resources in a namespace to use this gateway
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   labels:
-    istio.io/waypoint-for: service # only traffic destined for Services will be proxied through waypoint.
+    istio.io/waypoint-for: all # only traffic destined for Services will be proxied through waypoint.
   name: waypoint # Deploys waypoint proxy to process L7's istio network features
-  namespace: istio-system
+  namespace: app
 spec:
   gatewayClassName: istio-waypoint
   listeners:
@@ -86,7 +108,7 @@ spec:
     protocol: HBONE
     allowedRoutes:
       namespaces:
-        from: Selector # 'All' to allow from any namespaces
+        from: All
         selector:
           matchLabels:
             kubernetes.io/metadata.name: app # allow resources in a namespace to use this gateway
