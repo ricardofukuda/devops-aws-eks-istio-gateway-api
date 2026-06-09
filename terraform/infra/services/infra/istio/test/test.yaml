@@ -167,3 +167,25 @@ spec:
         name: alpine
         ports:
         - containerPort: 80
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: http
+  namespace: app # must be in the same namespace as target object
+spec:
+  scaleTargetRef:
+    name: http
+  minReplicaCount: 1
+  maxReplicaCount: 3
+  pollingInterval: 60
+  cooldownPeriod: 300
+  initialCooldownPeriod: 60
+  advanced:
+    restoreToOriginalReplicaCount: true
+  triggers:
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus-stack-kube-prom-prometheus.prometheus-stack:9090
+        threshold: '3'
+        query: sum(rate(istio_requests_total{destination_workload="http"}[90s]))
