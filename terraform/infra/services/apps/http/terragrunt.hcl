@@ -3,5 +3,5 @@ include "root" {
 }
 
 dependencies {
-  paths = ["../prometheus"]
+  paths = ["../../infra/istio", "../../infra/keda"]
 }

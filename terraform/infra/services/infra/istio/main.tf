@@ -1,3 +1,18 @@
+resource "kubernetes_namespace" "app" {
+  metadata {
+    name = "app"
+    labels = {
+      "istio.io/dataplane-mode" = "ambient" # To add applications or namespaces to the mesh in ambient mode
+      "istio.io/use-waypoint" = "waypoint" # must match the waypoint's Gateway 'name'. By default, matches waypoint from the same namespace
+      #"istio.io/use-waypoint-namespace" = "istio-system" # allow apps Pods to access the waypoint from the istio-system namespace
+      "istio.io/use-waypoint-namespace" = "app" # allow apps Pods to access the waypoint from the istio-system namespace
+    }
+    annotations = {
+      "networking.istio.io/traffic-distribution"= "PreferSameZone" # Prioritize endpoints by proximity: network, region, zone, then subzone. Traffic goes to the closest healthy endpoints first.
+    }
+  }
+}
+
 # INSTALL PROFILE=AMBIENT REFERENCE https://istio.io/latest/docs/ambient/install/helm/
 # PRE-REQUISITES https://istio.io/latest/docs/ambient/install/platform-prerequisites/#amazon-elastic-kubernetes-service-eks
 # Install or upgrade the Kubernetes Gateway API CRDs https://gateway-api.sigs.k8s.io/guides/getting-started/introduction/#installing-gateway-api

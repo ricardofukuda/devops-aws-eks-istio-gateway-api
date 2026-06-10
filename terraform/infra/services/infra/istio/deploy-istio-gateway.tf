@@ -17,5 +17,5 @@ resource "kubernetes_manifest" "istio_gateway" {
   count = length(local.istio_gateway_manifest_raw)
   manifest = local.istio_gateway_manifest_raw[count.index]
 
-  depends_on=[helm_release.istio_base]
+  depends_on=[helm_release.istio_base, kubernetes_namespace.app]
 }
