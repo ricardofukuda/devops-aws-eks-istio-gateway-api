@@ -87,6 +87,7 @@ spec:
   parentRefs:
   - name: gateway-public
     namespace: istio-ingress
+    sectionName: https # precisa fazer bind no 'https' pois 'http' vai fazer apenas redirect para o https.
   hostnames: ["http.ricardoxyz.website"]
   rules:
   - matches:
@@ -175,8 +176,8 @@ metadata:
   namespace: app # must be in the same namespace as target object
   annotations:
     autoscaling.keda.sh/paused: "false" # false: disable scale in AND out. 
-    autoscaling.keda.sh/paused-replicas: "0" # will scale your current workload to specified amount of replicas and pause autoscaling. You can set the value of replicas for an object to be paused to any arbitrary number.
-    autoscaling.keda.sh/force-activation: "false" # true: KEDA will treat all configured scalers as active. If the scalers were previously not active, KEDA will scale the service up from 0.
+    #autoscaling.keda.sh/paused-replicas: "0" # will scale your current workload to specified amount of replicas and pause autoscaling. You can set the value of replicas for an object to be paused to any arbitrary number.
+    #autoscaling.keda.sh/force-activation: "false" # true: KEDA will treat all configured scalers as active. If the scalers were previously not active, KEDA will scale the service up from 0.
 spec:
   scaleTargetRef:
     name: http
@@ -190,6 +191,7 @@ spec:
   triggers:
     - type: prometheus
       metadata:
+        useCachedMetrics: true #  Enables caching of metric values during polling interval. Can significantly reduce the load on the scaler service.
         serverAddress: http://prometheus-stack-kube-prom-prometheus.prometheus-stack:9090
         activationThreshold: '1' # for 'Activation' phase. Defines when the scaler is active or not and scales FROM/TO 0 based on it. # Scales from 0 only when requests exceed X.
         threshold: '3' # for "Scaling" phase. Defines the target value to scale the workload FROM 1 TO N instances and vice versa.
