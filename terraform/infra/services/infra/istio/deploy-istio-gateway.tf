@@ -23,4 +23,8 @@ resource "kubernetes_manifest" "istio_gateway" {
   manifest = local.istio_gateway_manifest_raw[count.index]
 
   depends_on=[helm_release.istio_base, kubernetes_namespace.app, kubernetes_namespace.istio_ingress]
+
+  field_manager {
+    force_conflicts = true
+  }
 }

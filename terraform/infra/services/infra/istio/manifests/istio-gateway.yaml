@@ -24,7 +24,6 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp" # must be tcp
     service.beta.kubernetes.io/load-balancer-source-ranges: "${lb_source_range}"
     #service.beta.kubernetes.io/aws-load-balancer-security-group-prefix-lists: "pl-3b927c52"
-
 spec:
   gatewayClassName: istio
   infrastructure:
@@ -45,8 +44,8 @@ spec:
     port: 80
     protocol: HTTP # backend protocol
     allowedRoutes:
-      namespaces:
-        from: All
+      namespaces: # Namespaces indicates namespaces from which Routes may be attached to this
+        from: All # All: Routes in all namespaces may be used by this Gateway. Selector: Routes in namespaces selected by the selector may be used by this Gateway. Same: Only Routes in the same namespace may be used by this Gateway.
 ---
 # force http to https redirect
 apiVersion: gateway.networking.k8s.io/v1beta1
@@ -67,32 +66,12 @@ spec:
       requestRedirect:
         scheme: https
         statusCode: 301
-#---
-#apiVersion: gateway.networking.k8s.io/v1
-#kind: Gateway
-#metadata:
-#  labels:
-#    istio.io/waypoint-for: service # only traffic destined for Services will be proxied through waypoint.
-#  name: waypoint # Deploys waypoint proxy to process L7's istio network features
-#  namespace: istio-system
-#spec:
-#  gatewayClassName: istio-waypoint
-#  listeners:
-#  - name: mesh
-#    port: 15008
-#    protocol: HBONE
-#    allowedRoutes:
-#      namespaces:
-#        from: Selector # 'All' to allow from any namespaces
-#        selector:
-#          matchLabels:
-#            kubernetes.io/metadata.name: app # allow resources in a namespace to use this gateway
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   labels:
-    istio.io/waypoint-for: all # only traffic destined for Services will be proxied through waypoint.
+    istio.io/waypoint-for: service # only traffic destined for Services will be proxied through waypoint.
   name: waypoint # Deploys waypoint proxy to process L7's istio network features
   namespace: app
 spec:
@@ -103,7 +82,24 @@ spec:
     protocol: HBONE
     allowedRoutes:
       namespaces:
-        from: All
+        from: Selector # 'Selector': Routes in namespaces selected by the selector may be used by
         selector:
           matchLabels:
             kubernetes.io/metadata.name: app # allow resources in a namespace to use this gateway
+#---
+#apiVersion: gateway.networking.k8s.io/v1
+#kind: Gateway
+#metadata:
+#  labels:
+#    istio.io/waypoint-for: all # 	all: Both service and workload traffic will be proxied through waypoint.
+#  name: waypoint # Deploys waypoint proxy to process L7's istio network features
+#  namespace: app
+#spec:
+#  gatewayClassName: istio-waypoint
+#  listeners:
+#  - name: mesh
+#    port: 15008
+#    protocol: HBONE
+#    allowedRoutes:
+#      namespaces:
+#        from: All # 'All': to allow from any namespaces

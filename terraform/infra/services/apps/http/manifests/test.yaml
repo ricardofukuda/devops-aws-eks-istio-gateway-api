@@ -61,22 +61,6 @@ spec:
         name: http
         ports:
         - containerPort: 80
-#---
-#apiVersion: gateway.networking.k8s.io/v1
-#kind: Gateway
-#metadata:
-#  name: gateway
-#  namespace: istio-ingress
-#spec:
-#  gatewayClassName: istio
-#  listeners:
-#  - name: default
-#    hostname: "*.example.com"
-#    port: 80
-#    protocol: HTTP
-#    allowedRoutes:
-#      namespaces:
-#        from: All
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -99,27 +83,40 @@ spec:
       port: 8000
 ---
 apiVersion: security.istio.io/v1 
-kind: AuthorizationPolicy # Enforce Layer 4 authorization policy - allow or deny which services can communicate with http pods
+kind: AuthorizationPolicy # Enforce Layer 7 authorization policy - allow or deny which services can communicate with http pods
 metadata:
-  name: http
+  name: http-waypoint
   namespace: app
 spec: # https://ambientmesh.io/docs/security/waypoint-authz/
   targetRefs: # targetRefs is for L7 waypoint policies
   - kind: Service # Can be a Service, Waypoint or WaypointClass
     name: http
-#  selector: # selector is for ztunnel L4 policies
-#    matchLabels:
-#      app: http # select this service
   action: ALLOW
   rules:
     - from:
       - source:
           principals:
-          - cluster.local/ns/app/sa/alpine
-          #- cluster.local/ns/app/sa/waypoint # This references all traffic from this waypoint
+          - cluster.local/ns/app/sa/alpine # only allow L7 traffic from this service account. Others will get "RBAC: access denied"
       to:
       - operation:
-          methods: ["GET"] # Enforce Layer 7 authorization policy. Resquires waypoint proxy install.
+          methods: ["GET"] # Enforce Layer 7 authorization policy. Requires waypoint proxy install.
+---
+apiVersion: security.istio.io/v1 
+kind: AuthorizationPolicy # Enforce Layer 4 authorization policy - allow or deny which services can communicate with http pods
+metadata:
+  name: http-ztunnel
+  namespace: app
+spec: # https://ambientmesh.io/docs/security/waypoint-authz/
+  selector: # selector is for ztunnel L4 policies
+    matchLabels:
+      app: http # select this service
+  action: ALLOW
+  rules:
+    - from:
+      - source:
+          principals: # traffic not defined will receive: "upstream connect error or disconnect/reset before headers. reset reason: connection termination"
+          - cluster.local/ns/app/sa/waypoint # allow all L4 traffic from this waypoint. "Waypoint proxies do not impersonate the identity of the source workload. Once you have introduced a waypoint to the traffic path, the destination ztunnel will see traffic with the waypoint’s identity, not the source identity.". "Even if you only wish to enforce policy against L4 attributes, if you are dependent on the source identity, you should attach your policy to your waypoint proxy."
+          - cluster.local/ns/istio-ingress/sa/gateway-public-istio # allow all L4 traffic from ingress
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -196,3 +193,53 @@ spec:
         activationThreshold: '1' # for 'Activation' phase. Defines when the scaler is active or not and scales FROM/TO 0 based on it. # Scales from 0 only when requests exceed X.
         threshold: '3' # for "Scaling" phase. Defines the target value to scale the workload FROM 1 TO N instances and vice versa.
         query: sum(rate(istio_requests_total{destination_workload="http"}[90s]))
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alpine-outside
+  namespace: prometheus-stack
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alpine-outside
+  namespace: prometheus-stack
+  labels:
+    app: alpine
+    service: alpine
+spec:
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 80
+  selector:
+    app: alpine
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alpine-outside
+  namespace: prometheus-stack
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alpine
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: alpine
+        version: v1
+    spec:
+      serviceAccountName: alpine-outside
+      containers:
+      - image: alpine:3.23.4
+        imagePullPolicy: IfNotPresent
+        command: ["sh", "-c", "apk add curl && watch -n 1 curl http://http.app:8000"] # curl http://http.app:8000
+        name: alpine
+        ports:
+        - containerPort: 80
+---
